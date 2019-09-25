@@ -20,6 +20,7 @@ class Board:
         self.size = size
         self.board = np.zeros((size, size), dtype=np.int8)
         self.agents = list()
+        self.action_str = ''
 
     def set_goal(self, position):
         self.board[position] = Board.goal_id
@@ -29,8 +30,9 @@ class Board:
             agent_id = len(self.agents) + 1
             self.agents.append(Agent(agent_id, position))
             self.board[position] = agent_id
+            self.log_action(f'Agent {agent_id} added to {position}')
         else:
-            print(f'Position {position} already taken!')
+            self.log_action(f'Position {position} already taken! Agent not added!')
 
     def will_collide(self, position, move):
         """
@@ -43,9 +45,11 @@ class Board:
         collide = False
         new_position = np.array(position) + Agent.moves[move]
         new_position = np.clip(new_position, 0, self.size - 1)
+
         if self.board[new_position[0], new_position[1]] > 0:
             # Will collide with other agent
             collide = True
+
         return collide
 
     def move_agent(self, agent_id, move):
@@ -55,23 +59,20 @@ class Board:
         :return: None
         """
         if isinstance(move, str):
-            move = Board.dir2mov[move]
+            move_num = Board.dir2mov[move]
+        else:
+            move_num = move
+
         a = self.get_agent(agent_id)
-        if not self.will_collide(a.position, move):
-            a.move(move)
+        
+        if not self.will_collide(a.position, move_num):
+            a.move(move_num)
             # Do not move off board
             a.position = np.clip(a.position, 0, self.size - 1)
             self.update()
+            self.log_action(f'Agent {agent_id} moves {move}')
         else:
-            print(f'Agent {agent_id} will not move to avoid collision!')
-
-    def update(self):
-        """
-        Re-render agents on board.
-        """
-        self.board[self.board > 0] = 0
-        for a in self.agents:
-            self.board[a.position[0], a.position[1]] = a.id
+            self.log_action(f'Agent {agent_id} will not move {move} to avoid collision!')
 
     def get_agent(self, id):
         return self.agents[id - 1]
@@ -83,30 +84,59 @@ class Board:
         """
         return np.flip(self.board, 1).transpose()
 
-    def show(self):
+    def log_action(self, action):
+        self.action_str += '\n' + action
+
+    def pop_action(self):
+        action = self.action_str
+        self.action_str = '\n'
+        return action
+
+    def update(self):
+        """
+        Update agents positions on board.
+        """
+        self.board[self.board > 0] = 0
+
+        for a in self.agents:
+            self.board[a.position[0], a.position[1]] = a.id
+
+    def show(self, sleep=0.5):
+        """
+        Print board on screen and flush action strings.
+
+        :param sleep: Time in seconds
+        :return: None
+        """
         os.system(Board.clear_console)
         outstr = self.get_pretty_view().__str__()
+        outstr = outstr.replace('-1', ' x')
+        outstr = outstr.replace('0', '.')
+        outstr += self.pop_action()
+        outstr += '\n'
         sys.stdout.write(outstr)
         sys.stdout.flush()
-        time.sleep(1)
+        time.sleep(sleep)
 
 
 if __name__ == '__main__':
 
-    board = Board(6)
+    s = 0.5
+
+    board = Board(10)
     board.set_goal(position=(4, 2))
-    board.show()
+    board.show(s)
     board.add_agent(position=(1, 0))  # Agent 1
-    board.show()
+    board.show(s)
     board.add_agent(position=(2, 3))  # Agent 2
-    board.show()
+    board.show(s)
     board.move_agent(agent_id=1, move='N')
-    board.show()
+    board.show(s)
     board.move_agent(agent_id=1, move='NW')
-    board.show()
+    board.show(s)
     board.move_agent(agent_id=2, move='S')
-    board.show()
+    board.show(s)
     board.move_agent(agent_id=1, move='E')
-    board.show()
+    board.show(s)
     board.move_agent(agent_id=1, move='E')
-    board.show()
+    board.show(s)
