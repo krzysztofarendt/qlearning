@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import random
 import numpy as np
 from agent import Agent
 
@@ -10,17 +11,21 @@ class Board:
     clear_console = 'clear' if os.name == 'posix' else 'CLS'
 
     goal_id = -1
+    wall_id = -2
 
     dir2mov = {
         'NW': 0, 'N': 1, 'NE': 2, 'E': 3,
         'SE': 4, 'S': 5, 'SW': 6, 'W': 7
     }
 
+    mov2dir = {v: k for k, v in dir2mov.items()}
+
     def __init__(self, size):
         self.size = size
         self.board = np.zeros((size, size), dtype=np.int8)
         self.agents = list()
-        self.action_str = ''
+        self.walls = list()
+        self.action_str = '\n'
 
     def set_goal(self, position):
         self.board[position] = Board.goal_id
@@ -36,7 +41,7 @@ class Board:
 
     def will_collide(self, position, move):
         """
-        Check if move would result in a collision with another agent.
+        Check if move would result in a collision with another agent or wall.
 
         :param position: tuple
         :param move: int (0..7)
@@ -47,7 +52,10 @@ class Board:
         new_position = np.clip(new_position, 0, self.size - 1)
 
         if self.board[new_position[0], new_position[1]] > 0:
-            # Will collide with other agent
+            # Will collide with another agent
+            collide = True
+        elif tuple(new_position) in self.walls:
+            # Will collide with a wall
             collide = True
 
         return collide
@@ -76,6 +84,11 @@ class Board:
 
     def get_agent(self, id):
         return self.agents[id - 1]
+
+    def add_wall(self, position):
+        self.board[position] = Board.wall_id
+        self.walls.append(position)
+        self.log_action(f'Wall added at {position}')
 
     def get_pretty_view(self):
         """
@@ -111,7 +124,12 @@ class Board:
         os.system(Board.clear_console)
         outstr = self.get_pretty_view().__str__()
         outstr = outstr.replace('-1', ' x')
+        outstr = outstr.replace('-2', ' #')
         outstr = outstr.replace('0', '.')
+        outstr = outstr.replace('[[', ' [')
+        outstr = outstr.replace(']]', '] ')
+        outstr = outstr.replace('[', ' ')
+        outstr = outstr.replace(']', ' ')
         outstr += self.pop_action()
         outstr += '\n'
         sys.stdout.write(outstr)
@@ -124,19 +142,25 @@ if __name__ == '__main__':
     s = 0.5
 
     board = Board(10)
-    board.set_goal(position=(4, 2))
+    board.set_goal(position=(6, 5))
+    board.add_wall(position=(4, 2))
+    board.add_wall(position=(4, 3))
+    board.add_wall(position=(4, 4))
+    board.add_wall(position=(4, 5))
+    board.add_wall(position=(4, 6))
+    board.add_wall(position=(4, 7))
+    board.add_wall(position=(5, 2))
+    board.add_wall(position=(6, 2))
+    board.add_wall(position=(7, 2))
     board.show(s)
     board.add_agent(position=(1, 0))  # Agent 1
     board.show(s)
     board.add_agent(position=(2, 3))  # Agent 2
     board.show(s)
-    board.move_agent(agent_id=1, move='N')
-    board.show(s)
-    board.move_agent(agent_id=1, move='NW')
-    board.show(s)
-    board.move_agent(agent_id=2, move='S')
-    board.show(s)
-    board.move_agent(agent_id=1, move='E')
-    board.show(s)
-    board.move_agent(agent_id=1, move='E')
-    board.show(s)
+
+    # Random moves
+    for i in range(1000):
+        mov2dir = board.mov2dir
+        board.move_agent(agent_id=1, move=mov2dir[random.randint(0, 7)])
+        board.move_agent(agent_id=2, move=mov2dir[random.randint(0, 7)])
+        board.show(0.1)
