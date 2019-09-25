@@ -52,7 +52,9 @@ class Board:
         new_position = np.clip(new_position, 0, self.size - 1)
 
         if self.board[new_position[0], new_position[1]] > 0:
-            # Will collide with another agent
+            # Will collide with another agent or an edge of the board
+            # If it wants to move off board, the value is equal to agent_id (>0),
+            # because the position was clipped few lines above
             collide = True
         elif tuple(new_position) in self.walls:
             # Will collide with a wall
@@ -73,14 +75,14 @@ class Board:
 
         a = self.get_agent(agent_id)
         
-        if not self.will_collide(a.position, move_num):
+        if self.will_collide(a.position, move_num):
+            self.log_action(f'Agent {agent_id} will not move {move} to avoid collision!')
+        else:
             a.move(move_num)
-            # Do not move off board
+            # Clip position to board dimensions - never move off board
             a.position = np.clip(a.position, 0, self.size - 1)
             self.update()
-            self.log_action(f'Agent {agent_id} moves {move}')
-        else:
-            self.log_action(f'Agent {agent_id} will not move {move} to avoid collision!')
+            self.log_action(f'Agent {agent_id} moves {move}')            
 
     def get_agent(self, id):
         return self.agents[id - 1]
@@ -139,7 +141,7 @@ class Board:
 
 if __name__ == '__main__':
 
-    s = 0.5
+    s = 0.1
 
     board = Board(10)
     board.set_goal(position=(6, 5))
@@ -159,8 +161,8 @@ if __name__ == '__main__':
     board.show(s)
 
     # Random moves
-    for i in range(1000):
+    for i in range(100):
         mov2dir = board.mov2dir
         board.move_agent(agent_id=1, move=mov2dir[random.randint(0, 7)])
         board.move_agent(agent_id=2, move=mov2dir[random.randint(0, 7)])
-        board.show(0.1)
+        board.show(s)
