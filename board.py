@@ -1,8 +1,13 @@
+import os
+import sys
+import time
 import numpy as np
 from agent import Agent
 
 
 class Board:
+
+    clear_console = 'clear' if os.name == 'posix' else 'CLS'
 
     goal_id = -1
 
@@ -79,20 +84,29 @@ class Board:
         return np.flip(self.board, 1).transpose()
 
     def show(self):
-        print(self.get_pretty_view())
+        os.system(Board.clear_console)
+        outstr = self.get_pretty_view().__str__()
+        sys.stdout.write(outstr)
+        sys.stdout.flush()
+        time.sleep(1)
 
 
 if __name__ == '__main__':
 
     board = Board(6)
     board.set_goal(position=(4, 2))
+    board.show()
     board.add_agent(position=(1, 0))  # Agent 1
+    board.show()
     board.add_agent(position=(2, 3))  # Agent 2
-
     board.show()
     board.move_agent(agent_id=1, move='N')
+    board.show()
     board.move_agent(agent_id=1, move='NW')
+    board.show()
     board.move_agent(agent_id=2, move='S')
+    board.show()
     board.move_agent(agent_id=1, move='E')
+    board.show()
     board.move_agent(agent_id=1, move='E')
     board.show()
