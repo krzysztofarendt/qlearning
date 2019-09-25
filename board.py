@@ -33,7 +33,9 @@ class Board:
     def add_agent(self, position):
         if self.board[position] == 0:
             agent_id = len(self.agents) + 1
-            self.agents.append(Agent(agent_id, position))
+            agent = Agent(agent_id, position)
+            agent.init_tables(self)
+            self.agents.append(agent)
             self.board[position] = agent_id
             self.log_action(f'Agent {agent_id} added to {position}')
         else:
@@ -144,18 +146,25 @@ if __name__ == '__main__':
     s = 0.1
 
     board = Board(10)
-    board.set_goal(position=(6, 5))
+    board.set_goal(position=(9, 0))
+    board.set_goal(position=(6, 4))
+    board.set_goal(position=(7, 4))
+    board.set_goal(position=(8, 4))
     board.add_wall(position=(4, 2))
     board.add_wall(position=(4, 3))
     board.add_wall(position=(4, 4))
     board.add_wall(position=(4, 5))
     board.add_wall(position=(4, 6))
-    board.add_wall(position=(4, 7))
+    board.add_wall(position=(5, 6))
+    board.add_wall(position=(6, 6))
+    board.add_wall(position=(7, 6))
     board.add_wall(position=(5, 2))
     board.add_wall(position=(6, 2))
     board.add_wall(position=(7, 2))
+    board.add_wall(position=(8, 2))
+    board.add_wall(position=(9, 2))
     board.show(s)
-    board.add_agent(position=(1, 0))  # Agent 1
+    board.add_agent(position=(3, 1))  # Agent 1
     board.show(s)
     board.add_agent(position=(2, 3))  # Agent 2
     board.show(s)
@@ -166,3 +175,7 @@ if __name__ == '__main__':
         board.move_agent(agent_id=1, move=mov2dir[random.randint(0, 7)])
         board.move_agent(agent_id=2, move=mov2dir[random.randint(0, 7)])
         board.show(s)
+    
+    # Print mtables
+    a1 = board.get_agent(1)
+    print(a1.mtable)

@@ -1,0 +1,4 @@
+- Should agent movement be managed by Board or by Agent?
+- If by Agent, then how Agent will now if he collides with an obstacle?
+- If by Board, then move exploration/exploitation methods to Board.
+- Maybe agent should be given a new position from Board? (instead of movement direction).
