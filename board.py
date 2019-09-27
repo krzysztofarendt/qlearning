@@ -3,6 +3,7 @@ import sys
 import time
 import random
 import numpy as np
+from scipy.spatial import distance
 from agent import Agent
 
 
@@ -13,12 +14,10 @@ class Board:
     goal_id = -1
     wall_id = -2
 
-    dir2mov = {
-        'NW': 0, 'N': 1, 'NE': 2, 'E': 3,
-        'SE': 4, 'S': 5, 'SW': 6, 'W': 7
-    }
-
-    mov2dir = {v: k for k, v in dir2mov.items()}
+    # Rewards
+    goal_reward = 500
+    movement_reward = -10
+    collision_reward = -50
 
     def __init__(self, size):
         self.size = size
@@ -26,20 +25,50 @@ class Board:
         self.agents = list()
         self.walls = list()
         self.action_str = '\n'
+        self.goal_density = np.zeros((size, size))
+        self.goal_not_achieved = True
 
     def set_goal(self, position):
-        self.board[position] = Board.goal_id
+        self.board[tuple(position)] = Board.goal_id
 
-    def add_agent(self, position):
+        # Calculate distance grid
+        i_trg = position[0]
+        j_trg = position[1]
+        d = np.zeros(self.goal_density.shape)
+
+        for i in range(d.shape[0]):
+            for j in range(d.shape[1]):
+                d[i, j] = distance.euclidean((i_trg, j_trg), (i, j))
+
+        # Distance to density
+        d_max = 8.
+        d = d_max / (d + 0.1)  # To avoid zero division
+        d[tuple(position)] = d_max
+
+        self.goal_density = np.round(d, 0).astype(np.int16)
+
+        self.log_action('Goal density:\n' 
+            + str(self.goal_density.transpose()))
+
+    def add_agent(self, position, agent=None):
         if self.board[position] == 0:
             agent_id = len(self.agents) + 1
-            agent = Agent(agent_id, position, board=self)
-            agent.init_qtable()
+            if agent is None:
+                agent = Agent(agent_id, position, board=self)
+            else:
+                agent.position = np.array(position, dtype=np.int16)
+                agent.board = self
+                agent.id = agent_id
             self.agents.append(agent)
             self.board[position] = agent_id
             self.log_action(f'Agent {agent_id} added to {position}')
         else:
             self.log_action(f'Position {position} already taken! Agent not added!')
+
+    def take_off_agents(self):
+        agents = self.agents
+        self.agents = list()
+        return agents 
 
     def process_move(self, position, move):
         """
@@ -50,25 +79,51 @@ class Board:
         :return: 2-element int array
         """
         position = position
-        requested_position = np.array(position) + Agent.moves[move]
+        requested_position = np.array(position, dtype=np.int16) + Agent.moves[move]
+        reward = 0
+        desc = None
 
         if (requested_position > self.size - 1).any() or (requested_position < 0).any():
             # Avoid going off board
             new_position = position
+            reward += Board.collision_reward
+            desc = 'Boundary collision'
 
         elif self.board[tuple(requested_position)] > 0:
             # Move blocked by another agent
             new_position = position
+            reward += Board.collision_reward
+            desc = 'Agent collision'
 
         elif tuple(requested_position) in self.walls:
             # Move blocked by a wall
             new_position = position
+            reward += Board.collision_reward
+            desc = 'Wall collision'
+
+        elif self.board[tuple(requested_position)] == -1:
+            # Goal achieved
+            new_position = requested_position
+            reward += Board.goal_reward
+            desc = 'GOAL ACHIEVED!'
+            self.take_off_goal(requested_position)
+            self.goal_not_achieved = False
 
         else:
             # Move clear
             new_position = requested_position
+            reward += Board.movement_reward
 
-        return new_position                 
+        # Add reward based on distance from goals
+        reward += self.get_dist_reward(new_position)
+
+        return new_position, reward, desc
+
+    def get_dist_reward(self, position):
+        return self.goal_density[tuple(position)]
+
+    def take_off_goal(self, position):
+        self.goal_density = np.zeros(self.goal_density.shape)
 
     def get_agent(self, id):
         return self.agents[id - 1]

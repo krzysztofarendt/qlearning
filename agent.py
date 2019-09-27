@@ -1,5 +1,6 @@
 import random
 import numpy as np
+import pandas as pd
 
 
 class Agent:
@@ -25,10 +26,17 @@ class Agent:
 
     def __init__(self, agent_id, position, board):
         self.id = agent_id
-        self.position = np.array(position)
-        self.epsilon = 0.2
+        self.position = np.array(position, dtype=np.int16)
         self.qtable = None
         self.board = board
+
+        # Learning parameters
+        self.epsilon = 0.2
+        self.alpha = 0.1
+        self.gamma = 0.2
+
+        # Initialize Q-table
+        self.init_qtable()
 
     def init_qtable(self):
         # Action quality table
@@ -37,11 +45,34 @@ class Agent:
 
     def move(self, m):
 
+        old_position = self.position
+
+        # If m is str, convert to int
         if isinstance(m, str):
             m = Agent.dir2mov[m]
 
-        self.position = self.board.process_move(self.position, m)
+        # Process move
+        self.position, reward, desc = self.board.process_move(self.position, m)
+
+        # Log feedback
+        if desc is not None:
+            self.board.log_action(f'Agent {self.id}: {desc}')
+
+        # Re-render board
         self.board.update()
+
+        # Update Q-table
+        self.update_Qtable(old_position, m, self.position, reward)
+
+    def update_Qtable(self, old_state, action, new_state, reward):
+        self.qtable[old_state[0], old_state[1], action] = \
+            self.qtable[old_state[0], old_state[1], action] + \
+            self.alpha * \
+            (
+                reward +
+                self.gamma * np.max(self.qtable[new_state[0], new_state[1], :]) -
+                self.qtable[old_state[0], old_state[1], action]
+            )
 
     def explore(self):
         """
@@ -53,10 +84,22 @@ class Agent:
         """
         Exploitation: follow highest q-value.
         """
-        pass
+        q_pos = self.qtable[self.position[0], self.position[1], :]
+        best_move = q_pos[(q_pos == q_pos.max())]
+
+        if best_move.size > 1:
+            best_move = np.random.choice(best_move, size=1)[0]
+        
+        self.move(best_move)
 
     def action(self):
         if random.uniform(0, 1) < self.epsilon:
             self.explore()
         else:
             self.exploit()
+
+    def save_qtable(self, path):
+        np.save(path, self.qtable)
+
+    def read_qtable(self, path):
+        np.load(path)
