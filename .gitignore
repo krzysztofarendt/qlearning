@@ -1,8 +1,7 @@
-# VS Code
+# Project-specific files
 .vscode/
-
-# Numpy files
 *.npy
+*.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -15,13 +15,14 @@ class Board:
     wall_id = -2
 
     # Rewards
-    goal_reward = 500
-    movement_reward = -10
-    collision_reward = -50
+    goal_reward = 100
+    movement_reward = -1
+    collision_reward = -5
 
     def __init__(self, size):
         self.size = size
         self.board = np.zeros((size, size), dtype=np.int8)
+        self.board_hist = np.zeros((size, size), dtype=np.int32)
         self.agents = list()
         self.walls = list()
         self.action_str = '\n'
@@ -51,6 +52,9 @@ class Board:
             + str(self.goal_density.transpose()))
 
     def add_agent(self, position, agent=None):
+
+        agent_added = False
+
         if self.board[position] == 0:
             agent_id = len(self.agents) + 1
             if agent is None:
@@ -62,8 +66,11 @@ class Board:
             self.agents.append(agent)
             self.board[position] = agent_id
             self.log_action(f'Agent {agent_id} added to {position}')
+            agent_added = True
         else:
             self.log_action(f'Position {position} already taken! Agent not added!')
+
+        return agent_added
 
     def take_off_agents(self):
         agents = self.agents
@@ -116,6 +123,9 @@ class Board:
 
         # Add reward based on distance from goals
         reward += self.get_dist_reward(new_position)
+
+        # Add position count to board history
+        self.board_hist[tuple(new_position)] += 1
 
         return new_position, reward, desc
 

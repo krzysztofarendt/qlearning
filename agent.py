@@ -24,24 +24,26 @@ class Agent:
 
     mov2dir = {v: k for k, v in dir2mov.items()}
 
-    def __init__(self, agent_id, position, board):
+    def __init__(self, agent_id, position, board, qtable=None):
         self.id = agent_id
         self.position = np.array(position, dtype=np.int16)
         self.qtable = None
         self.board = board
 
         # Learning parameters
-        self.epsilon = 0.2
+        self.epsilon = 0.05
         self.alpha = 0.1
-        self.gamma = 0.2
+        self.gamma = 0.9
 
         # Initialize Q-table
         self.init_qtable()
 
-    def init_qtable(self):
-        # Action quality table
-        qtable_shape = self.board.board.shape + (8, )  # (board size, board size, 8 moves)
-        self.qtable = np.zeros(qtable_shape)
+    def init_qtable(self, path=None):
+        if path is None:
+            qtable_shape = self.board.board.shape + (8, )  # (board size, board size, 8 moves)
+            self.qtable = np.zeros(qtable_shape)
+        else:
+            self.qtable = self.read_qtable(path)
 
     def move(self, m):
 
@@ -66,12 +68,12 @@ class Agent:
 
     def update_Qtable(self, old_state, action, new_state, reward):
         self.qtable[old_state[0], old_state[1], action] = \
+            (1 - self.alpha) * \
             self.qtable[old_state[0], old_state[1], action] + \
             self.alpha * \
             (
                 reward +
-                self.gamma * np.max(self.qtable[new_state[0], new_state[1], :]) -
-                self.qtable[old_state[0], old_state[1], action]
+                self.gamma * np.max(self.qtable[new_state[0], new_state[1], :])
             )
 
     def explore(self):
@@ -102,4 +104,5 @@ class Agent:
         np.save(path, self.qtable)
 
     def read_qtable(self, path):
-        np.load(path)
+        qtable = np.load(path)
+        return qtable
